@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evan Chan | The curiosity arcade</title>
+<script>
+(() => {
+  const param = new URLSearchParams(window.location.search).get("scoutTheme");
+  const theme =
+    param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", theme);
+})();
+</script>
+<style>
+:root, html[data-theme] {
+  color-scheme: dark;
+  --cp-bg: #000000;
+  --cp-bg-elevated: #000000;
+  --cp-surface: #000000;
+  --cp-surface-soft: #080e28;
+  --cp-border: #152568;
+  --cp-border-strong: #304dff;
+  --cp-text: #ffffff;
+  --cp-text-muted: #a5b5e8;
+  --cp-text-soft: #d5dfff;
+  --cp-accent: #ffe600;
+  --cp-accent-hover: #fff16b;
+  --cp-accent-soft: rgba(255, 230, 0, 0.08);
+  --cp-accent-fg: #000000;
+  --cp-success: #48f5b4;
+  --cp-danger: #ff3030;
+  --cp-warning: #ffe600;
+  --cp-player: #ffe600;
+  --cp-link: #2647ff;
+  --cp-shadow: 0 0 18px rgba(38, 71, 255, 0.12);
+  --cp-overlay: rgba(0, 0, 0, 0.9);
+  --cp-panel: rgba(0, 0, 0, 0.86);
+  --cp-panel-strong: rgba(0, 0, 0, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(255, 230, 0, 0.12);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--cp-bg-elevated); color: var(--cp-text); font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif; }
+button { cursor: pointer; font: inherit; color: inherit; }
+button, a { -webkit-tap-highlight-color: var(--cp-highlight); }
+button:focus-visible, a:focus-visible, .maze-stage:focus-visible { outline: 3px solid var(--cp-accent); outline-offset: 4px; }
+button { border: 0; }
+.mono { font-family: Consolas, "Courier New", Courier, monospace; }
+.site { max-width: 1260px; margin: auto; padding: 0 40px; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 24px 0; gap: 24px; border-bottom: 1px solid var(--cp-border); }
+.brand { font-size: 14px; font-weight: 750; letter-spacing: -.4px; display: flex; align-items: center; gap: 10px; }
+.brand-disc { width: 18px; height: 18px; border-radius: 50%; background: var(--cp-player); clip-path: polygon(0 0,100% 0,100% 20%,50% 50%,100% 80%,100% 100%,0 100%); }
+nav { display: flex; gap: 8px; align-items: center; }
+nav button { padding: 8px 12px; background: none; border-radius: 8px; font-size: 11px; color: var(--cp-text-soft); }
+nav button:hover { color: var(--cp-accent); background: var(--cp-accent-soft); }
+.intro { padding: 36px 0 28px; display: flex; justify-content: space-between; gap: 32px; align-items: end; }
+.eyebrow { font-size: 10px; letter-spacing: 2px; color: var(--cp-accent); font-weight: 650; }
+h1 { font-family: Consolas, "Courier New", Courier, monospace; font-size: clamp(36px,5.3vw,68px); line-height: 1; letter-spacing: -4px; margin: 14px 0 0; text-transform: uppercase; font-weight: 900; }
+h1 span { color: var(--cp-accent); }
+.intro-copy { max-width: 300px; font-size: 12px; line-height: 1.8; color: var(--cp-text-soft); margin: 0 0 2px; }
+.intro-copy strong { color: var(--cp-text); font-weight: 600; }
+.cabinet { background: var(--cp-surface); border: 2px solid var(--cp-link); border-radius: 16px; padding: 24px 28px; position: relative; }
+.cabinet-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid var(--cp-border); }
+.player-heading { font-size: 12px; font-weight: 700; letter-spacing: 2px; }
+.player-heading span { font-size: 9px; color: var(--cp-text-muted); display: block; letter-spacing: 1px; margin-top: 6px; }
+.score { text-align: right; font-size: 9px; color: var(--cp-text-soft); letter-spacing: 1px; }
+.score strong { display: block; color: var(--cp-accent); font-size: 25px; letter-spacing: 3px; margin-top: 4px; }
+.game-layout { display: grid; grid-template-columns: minmax(0,800px) minmax(160px,1fr); gap: 32px; align-items: center; padding-top: 20px; }
+.maze-stage { width: 100%; position: relative; aspect-ratio: 25 / 19; border-radius: 10px; touch-action: manipulation; }
+.maze-stage > svg { display: block; width: 100%; height: 100%; }
+.boundary, .island { fill: var(--cp-surface); stroke: var(--cp-link); stroke-width: 2.5; }
+.inner-line { fill: none; stroke: var(--cp-link); stroke-width: 1; opacity: .5; }
+.door-gap { stroke: var(--cp-surface); stroke-width: 20; }
+.door-jamb, .door-arrow { fill: none; stroke: var(--cp-warning); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.door-label { fill: var(--cp-warning); font-family: Consolas, "Courier New", Courier, monospace; font-size: 8px; letter-spacing: 1px; }
+.room { position: absolute; background: none; text-align: left; display: flex; flex-direction: column; justify-content: center; align-items: start; padding: 12px 18px; border-radius: 10px; transition: background .15s; }
+.room:hover, .room.linked { background: var(--cp-accent-soft); box-shadow: inset 0 0 0 2px var(--cp-accent); }
+.room-kicker { font-size: clamp(7px,.75vw,10px); letter-spacing: 1px; color: var(--cp-accent); font-family: Consolas, "Courier New", Courier, monospace; font-weight: 700; }
+.room strong { display: block; font-family: Consolas, "Courier New", Courier, monospace; font-size: clamp(12px,1.7vw,22px); letter-spacing: -.6px; line-height: 1.05; margin: 7px 0 4px; }
+.room small { font-size: clamp(7px,.72vw,10px); color: var(--cp-text-soft); }
+.room-arrow { position: absolute; right: 12px; top: 12px; font-size: 14px; color: var(--cp-accent); }
+.room.viewed .room-arrow { color: var(--cp-success); }
+.player-shape { fill: var(--cp-player); stroke: var(--cp-bg); stroke-width: .75; }
+#player-face circle { fill: var(--cp-bg); }
+.ghost-body { fill: var(--cp-danger); }
+.ghost-eye { fill: var(--cp-text); }
+.ghost-pupil { fill: var(--cp-link); }
+.ghost-label { fill: var(--cp-warning); font-family: Consolas, "Courier New", Courier, monospace; font-size: 8px; letter-spacing: 1px; }
+.game-aside { min-width: 0; }
+.aside-label { font-size: 9px; letter-spacing: 2px; color: var(--cp-accent); margin: 0 0 12px; }
+.game-aside h2 { font-family: Consolas, "Courier New", Courier, monospace; font-size: 27px; line-height: 1.1; letter-spacing: -1px; margin: 0 0 14px; }
+.game-aside p { font-size: 11px; color: var(--cp-text-soft); line-height: 1.8; margin: 0 0 18px; }
+.game-aside p strong { color: var(--cp-text); }
+.control-label { font-size: 9px; letter-spacing: 1px; margin: 20px 0 12px; color: var(--cp-text-muted); }
+.dpad { display: grid; grid-template-columns: repeat(3,38px); grid-template-rows: repeat(2,34px); gap: 5px; }
+.dpad button { background: var(--cp-surface-soft); border: 1px solid var(--cp-border-strong); border-bottom-width: 3px; border-radius: 6px; font-size: 16px; }
+.dpad button:hover { color: var(--cp-warning); border-color: var(--cp-warning); }
+.dpad button:first-child { grid-column: 2; }
+.dpad button:nth-child(2) { grid-row: 2; grid-column: 1; }
+.dpad button:nth-child(3) { grid-row: 2; grid-column: 2; }
+.dpad button:nth-child(4) { grid-row: 2; grid-column: 3; }
+.keyboard-tip { font-size: 9px; color: var(--cp-text-muted); margin-top: 9px; line-height: 1.6; }
+.free-play { border-top: 1px dashed var(--cp-border); padding-top: 16px; margin-top: 24px; font-size: 9px; color: var(--cp-warning); letter-spacing: 1px; line-height: 1.8; }
+.game-bottom { margin-top: 12px; border-top: 1px solid var(--cp-border); padding-top: 16px; display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+.status { font-size: 10px; color: var(--cp-text-soft); line-height: 1.6; min-height: 16px; margin: 0; }
+.reset { background: none; color: var(--cp-text-muted); font-size: 10px; white-space: nowrap; text-decoration: underline; text-underline-offset: 3px; padding: 6px; }
+.quick-links { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 12px; padding: 24px 0; }
+.quick-link { background: none; text-align: left; border-top: 1px solid var(--cp-border); padding: 12px 0 0; }
+.quick-link span { color: var(--cp-accent); font-family: Consolas, "Courier New", Courier, monospace; font-size: 9px; letter-spacing: 1px; }
+.quick-link strong { display: block; font-size: 12px; font-weight: 600; margin: 7px 0; }
+.quick-link small { font-size: 10px; color: var(--cp-text-muted); }
+.quick-link:hover strong, .quick-link.linked strong { color: var(--cp-accent); }
+footer { display: flex; gap: 16px; justify-content: space-between; padding: 16px 0 24px; font-size: 9px; line-height: 1.7; color: var(--cp-text-muted); }
+dialog { width: min(640px,calc(100% - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; background: var(--cp-surface); color: var(--cp-text); border: 2px solid var(--cp-link); border-radius: 16px; padding: 28px; }
+dialog::backdrop { background: var(--cp-overlay); }
+.dialog-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.dialog-top span { color: var(--cp-accent); font-size: 10px; letter-spacing: 1px; }
+.close { background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 10px; padding: 8px 12px; font-size: 11px; }
+dialog h2 { font-family: Consolas,"Courier New",Courier,monospace; font-size: 30px; letter-spacing: -1px; line-height: 1.15; margin: 24px 0 12px; }
+.detail-deck { font-size: 13px; line-height: 1.8; color: var(--cp-text-soft); }
+.detail-section { padding: 14px 0; border-top: 1px solid var(--cp-border); }
+.detail-section h3 { font-size: 11px; margin: 0 0 8px; }
+.detail-section p { font-size: 12px; line-height: 1.8; color: var(--cp-text-soft); margin: 0; }
+.sample-note { border-top: 1px solid var(--cp-border); padding-top: 14px; font-size: 10px; line-height: 1.7; color: var(--cp-text-muted); }
+.experience-heading { margin: 26px 0 12px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--cp-accent); }
+.experience-dialog {
+  width: min(1280px,calc(100% - 32px));
+  padding: 24px;
+  --cp-text: #ededeb;
+  --cp-text-soft: #c4c4c7;
+  --cp-text-muted: #99999f;
+  --cp-accent: #ededeb;
+  --cp-accent-soft: rgba(38, 71, 255, 0.10);
+  --cp-surface-soft: #080a10;
+  --cp-goal-soft: rgba(255, 230, 0, 0.07);
+}
+.experience-dialog button:focus-visible { outline-color: var(--cp-link); }
+.projects-dialog {
+  width: min(1040px,calc(100% - 32px));
+  --cp-text: #ededeb;
+  --cp-text-soft: #c4c4c7;
+  --cp-text-muted: #99999f;
+  --cp-accent: #ededeb;
+  --cp-surface-soft: #080a10;
+}
+.projects-dialog button:focus-visible, .projects-dialog a:focus-visible { outline-color: var(--cp-link); }
+.project-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin-top: 24px; }
+.project-card { display: flex; flex-direction: column; padding: 20px; border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-surface-soft); }
+.project-category { margin: 0 0 16px; color: var(--cp-text-muted); font-size: 10px; letter-spacing: 1px; line-height: 1.6; }
+.project-card h3 { margin: 0 0 12px; font-size: 20px; line-height: 1.3; letter-spacing: -.4px; }
+.project-summary { margin: 0 0 24px; color: var(--cp-text-soft); font-size: 12px; line-height: 1.8; }
+.project-link { align-self: start; margin-top: auto; color: var(--cp-text); font-size: 12px; text-underline-offset: 4px; }
+.project-link:hover { color: var(--cp-link); }
+.project-pending { margin: auto 0 0; color: var(--cp-text-muted); font-size: 11px; line-height: 1.6; }
+@media (max-width: 740px) { .project-grid { grid-template-columns: minmax(0,1fr); } }
+.experience-dialog h2 { margin: 14px 0 8px; font-size: 26px; }
+.experience-dialog .detail-deck { margin: 8px 0; font-size: 12px; line-height: 1.6; }
+.experience-dialog .experience-heading { margin: 16px 0 10px; }
+.timeline-note { font-size: 10px; line-height: 1.6; color: var(--cp-text-muted); margin: 0 0 12px; }
+.experience-timeline { display: grid; grid-template-columns: repeat(9,minmax(0,1fr)); grid-template-rows: auto 32px auto; column-gap: 8px; list-style: none; margin: 0; padding: 0; position: relative; }
+.timeline-axis { grid-column: 1 / -1; grid-row: 2; align-self: center; height: 2px; background: var(--cp-border-strong); }
+.timeline-axis-secondary { display: none; grid-row: 6; }
+.timeline-step { position: relative; min-width: 0; grid-column: var(--timeline-column) / span 2; grid-row: var(--timeline-row); align-self: end; }
+.timeline-step::before { content: ""; position: absolute; z-index: 1; left: calc(50% - 6px); bottom: -22px; width: 12px; height: 12px; background: var(--cp-surface); border: 2px solid var(--cp-link); border-radius: 50%; }
+.timeline-step::after { content: ""; position: absolute; left: calc(50% - 1px); bottom: -16px; width: 2px; height: 16px; background: var(--cp-border-strong); }
+.timeline-step[data-side="bottom"] { align-self: start; }
+.timeline-step[data-side="bottom"]::before { top: -22px; bottom: auto; }
+.timeline-step[data-side="bottom"]::after { top: -16px; bottom: auto; }
+.timeline-card { width: 100%; text-align: left; padding: 10px; border: 1px solid var(--cp-border); border-radius: 10px; background: var(--cp-surface-soft); }
+.timeline-card:hover, .timeline-card[aria-pressed="true"] { border-color: var(--cp-link); background: var(--cp-accent-soft); }
+.role-company { display: block; font-size: 12px; font-weight: 700; line-height: 1.4; margin: 0; }
+.role-dates { display: block; font-size: 9px; color: var(--cp-text-muted); margin: 0 0 6px; line-height: 1.4; }
+.role-theme { display: block; font-size: 10px; font-weight: 650; color: var(--cp-accent); margin: 8px 0 0; line-height: 1.4; }
+.role-story { font-size: 12px; line-height: 1.8; color: var(--cp-text-soft); margin: 0; }
+.timeline-goal::before { background: var(--cp-player); border-color: var(--cp-player); }
+.timeline-goal .timeline-card, .timeline-goal .timeline-card:hover, .timeline-goal .timeline-card[aria-pressed="true"] { border-color: var(--cp-player); background: var(--cp-goal-soft); }
+.timeline-goal .role-company, .timeline-goal .role-dates { color: var(--cp-player); }
+.timeline-insight { margin-top: 12px; padding: 12px; min-height: 104px; border: 1px solid var(--cp-border); border-radius: 10px; }
+.timeline-insight-meta { font-size: 10px; line-height: 1.6; color: var(--cp-text-muted); margin: 0 0 4px; }
+.timeline-insight h4 { font-size: 12px; color: var(--cp-accent); line-height: 1.5; margin: 0 0 4px; }
+.competition-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.competition { display: grid; grid-template-columns: 52px minmax(0,1fr); gap: 10px; align-items: center; border: 1px solid var(--cp-border); border-radius: 8px; padding: 10px; }
+.competition-rank { font-family: Consolas, "Courier New", Courier, monospace; font-size: 19px; font-weight: 750; color: var(--cp-accent); line-height: 1.1; }
+.competition-rank small { display: block; font-size: 9px; color: var(--cp-text-muted); margin-top: 3px; font-weight: 400; }
+.competition h4 { font-size: 11px; line-height: 1.45; margin: 0; }
+.competition p { margin: 3px 0 0; font-size: 9px; color: var(--cp-text-muted); }
+@media (max-width: 1000px) {
+  .site { padding: 0 24px; }
+  .game-layout { grid-template-columns: minmax(0,1fr) 150px; gap: 20px; }
+  .cabinet { padding: 20px; }
+  .room { padding: 8px 12px; }
+  .room strong { font-size: clamp(12px,1.9vw,18px); }
+  .room small { display: none; }
+  .room-arrow { right: 7px; top: 7px; font-size: 10px; }
+  .game-aside h2 { font-size: 24px; }
+}
+@media (max-width: 740px) {
+  .site { padding: 0 16px; }
+  header { padding: 18px 0; gap: 12px; }
+  nav { gap: 0; }
+  nav button { padding: 6px 8px; font-size: 10px; }
+  .intro { display: block; padding: 28px 0 24px; }
+  h1 { font-size: clamp(35px,8.5vw,60px); letter-spacing: -2px; }
+  .intro-copy { margin-top: 16px; max-width: 430px; }
+  .cabinet { padding: 16px 12px; }
+  .game-layout { grid-template-columns: minmax(0,1fr); padding-top: 16px; gap: 20px; }
+  .game-aside { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; border-top: 1px solid var(--cp-border); padding: 16px 4px 0; }
+  .aside-label { grid-column: 1; margin-bottom: 0; }
+  .game-aside h2 { font-size: 22px; grid-column: 1; margin: 0; }
+  .game-aside p { grid-column: 1; font-size: 10px; margin: 0; max-width: 240px; }
+  .manual-controls { grid-column: 2; grid-row: 1 / 4; }
+  .control-label, .free-play { display: none; }
+  .keyboard-tip { max-width: 124px; font-size: 8px; }
+  .room { padding: 3px 8px; border-radius: 6px; }
+  .room strong { font-size: clamp(11px,2.8vw,19px); margin: 3px 0 0; }
+  .room-kicker { font-size: clamp(6px,1.4vw,9px); letter-spacing: .3px; }
+  .room-arrow { top: 4px; right: 5px; }
+  .quick-links { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+  .quick-link:last-child { grid-column: 1 / 3; }
+  footer { display: block; }
+  footer span { display: block; margin-bottom: 6px; }
+}
+@media (max-width: 380px) {
+  header { align-items: start; }
+  .brand { font-size: 12px; gap: 6px; }
+  nav button { padding: 4px 5px; font-size: 9px; }
+  .room { padding: 2px 6px; }
+  .room-kicker { display: none; }
+  .room strong { font-size: 10px; }
+  .room-arrow { display: none; }
+  .player-heading { font-size: 10px; letter-spacing: 1px; }
+  .player-heading span { font-size: 8px; letter-spacing: .4px; }
+  .game-bottom { align-items: start; }
+}
+@media (max-width: 900px) {
+  .experience-timeline { grid-template-columns: repeat(5,minmax(0,1fr)); grid-template-rows: auto 32px auto 24px auto 32px auto; }
+  .timeline-step { grid-column: var(--timeline-mobile-column) / span 2; grid-row: var(--timeline-mobile-row); }
+  .timeline-axis-secondary { display: block; }
+}
+@media (max-width: 600px) {
+  .competition-grid { grid-template-columns: minmax(0,1fr); }
+  .competition { padding: 8px; grid-template-columns: 48px minmax(0,1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .room { transition: none; } }
+</style>
+</head>
+<body>
+<div class="site">
+  <header><div class="brand"><span class="brand-disc" aria-hidden="true"></span>EVAN CHAN</div><nav aria-label="Direct portfolio navigation"><button data-nav="pricing">Work</button><button data-nav="about">About</button><button data-nav="experience">Experience</button><button data-nav="contact">Contact</button></nav></header>
+  <section class="intro"><div><div class="eyebrow mono">WELCOME TO MY CORNER OF THE INTERNET</div><h1>The curiosity<br><span>arcade.</span></h1></div><p class="intro-copy">Strategy. Product. A few good rabbit holes.<br><strong>Pick a destination and follow your curiosity.</strong><br>Playing is optional. Exploring is the point.</p></section>
+  <main class="cabinet">
+    <div class="cabinet-top"><div class="player-heading mono">PLAYER 01 / EVAN CHAN<span>FIVE DOORWAYS. NO REQUIRED ORDER.</span></div><div class="score mono">ROOMS EXPLORED<strong id="score">00 / 05</strong></div></div>
+    <div class="game-layout">
+      <div class="maze-stage" id="maze-stage" tabindex="0" role="group" aria-label="Interactive portfolio maze. Enter a yellow-marked doorway using arrow keys or WASD, or click any room to auto-walk inside.">
+        <svg id="maze" viewBox="0 0 800 608" role="img" aria-label="An original arcade maze with five open doorways. Eat the red ghost to open About Me."><g id="walls"></g><g id="doorways"></g><g id="ghost" aria-hidden="true"><path class="ghost-body" d="M-12 12V0a12 12 0 0 1 24 0v12l-4-4-4 4-4-4-4 4-4-4Z"/><ellipse class="ghost-eye" cx="-4" cy="-1" rx="3.5" ry="4.5"/><ellipse class="ghost-eye" cx="5" cy="-1" rx="3.5" ry="4.5"/><circle class="ghost-pupil" cx="-3" cy="-1" r="1.8"/><circle class="ghost-pupil" cx="6" cy="-1" r="1.8"/><text class="ghost-label" x="0" y="27" text-anchor="middle">ABOUT ME</text></g><g id="player" transform="translate(400 560)" aria-hidden="true"><g id="player-face"><path class="player-shape" d="M0 0 11-11A16 16 0 1 0 11 11Z"/><circle cx="-1" cy="-7" r="2" fill="var(--cp-surface)"/></g></g></svg>
+      </div>
+      <aside class="game-aside"><div class="aside-label mono">HOW TO EXPLORE</div><h2>Find a doorway.<br>Step inside.</h2><p><strong>Enter a yellow-marked opening.</strong><br>Cross the doorway to open that section.<br><br>Eat the red ghost for About Me.<br><br>Click any room to auto-walk inside, or use the links below to jump straight in.</p><div class="manual-controls"><div class="control-label mono">TAKE THE CONTROLS</div><div class="dpad" aria-label="Movement controls"><button data-direction="up" aria-label="Move up">&uarr;</button><button data-direction="left" aria-label="Move left">&larr;</button><button data-direction="down" aria-label="Move down">&darr;</button><button data-direction="right" aria-label="Move right">&rarr;</button></div><div class="keyboard-tip mono">ARROW KEYS / WASD<br>Ready immediately. No click needed.</div></div><div class="free-play mono">FREE PLAY FOREVER<br>NO DOTS. NO TIMER.<br>EVERY DOOR IS OPEN.</div></aside>
+    </div>
+    <div class="game-bottom"><p class="status mono" id="status" role="status" aria-live="polite">READY, PLAYER ONE? Walk through any yellow doorway, or click a room to go inside.</p><button class="reset" id="reset-button">Restart arcade</button></div>
+  </main>
+  <section class="quick-links" id="quick-links" aria-label="Open any portfolio section immediately"></section>
+  <footer><span class="mono">EVAN CHAN / ALWAYS A LITTLE CURIOUS.</span><span>Experience and awards supplied by Evan. Explore selected strategy projects in Work.</span></footer>
+</div>
+<dialog id="detail-dialog" aria-labelledby="detail-title"><div class="dialog-top"><span class="mono" id="detail-category"></span><button class="close" id="close-dialog" autofocus>Back to arcade &times;</button></div><h2 id="detail-title"></h2><p class="detail-deck" id="detail-deck"></p><div id="detail-sections"></div><p class="sample-note">Concept content only. This is a preview of the portfolio experience, not verified biography or project outcomes. All other destinations are always available.</p></dialog>
+<script>
+const experienceTimeline = [
+  {company:'Launchpad Consulting',role:'Project Lead',dates:'January 2024 - April 2026',theme:'Start with the business problem.',story:'Consulting gave me a practical starting point: connecting a client\u2019s needs with a solution I could help deliver, including an agentic lead-generation workflow.'},
+  {company:'Schulich Business Technology Association',role:'Vice President of Member Development',dates:'March 2024 - December 2025',theme:'Add the people perspective.',story:'Alongside that consulting foundation, I took on a people-focused leadership role at BTA. It added a member-development perspective to my early business experience.'},
+  {company:'Pure Industrial (Blackstone Portfolio)',role:'Asset Management Intern',dates:'May 2024 - August 2024',theme:'Understand the financial side of the business.',story:'My first internship added a financial lens: using financial modelling and due diligence to understand property values, market positioning, and the economics behind commercial decisions.'},
+  {company:'Kensington',role:'Sales Strategy Intern',dates:'September 2024 - December 2024',theme:'Understand the sales cycle.',story:'From understanding business value, I moved closer to how revenue is generated: examining outreach, follow-up, and CRM workflows to understand how prospects move through the sales cycle and where conversion can improve.'},
+  {company:'Sage',role:'Business Strategy Intern',dates:'May 2025 - August 2025',theme:'Weigh the strategic choices.',story:'That customer-facing perspective broadened into business strategy: using market research, pricing scenarios, and product-migration decisions to evaluate growth opportunities and trade-offs.'},
+  {company:'Intuit',role:'Strategy and Product Intern',dates:'September 2025 - April 2026',theme:'Bring strategy into the product.',story:'At Intuit, I connected market and customer insight with product and go-to-market decisions, bringing competitive research into offers, experiments, and the customer journey.'},
+  {company:'Microsoft',role:'Program Management Intern',dates:'August 2026 - Present',theme:'Turn business needs into AI workflows.',story:'At Microsoft, I am building AI workflows for sales engagements, connecting automated enrichment, qualification, and routing with human decision points. It brings the earlier perspectives together: understanding a business need and designing how the work gets done.'}
+];
+const competitions = [
+  {name:'Deloitte Community Case Competition',rank:'3rd',field:'of 596'},
+  {name:'Schulich Corporate Social Responsibility Case Competition',rank:'3rd',sponsor:'KPMG'},
+  {name:'Schulich Entrepreneurship Club Case Competition',rank:'1st',sponsor:'BMO'},
+  {name:'Schulich Protege Program Case Competition',rank:'2nd',sponsor:'EY'}
+];
+const projects=[
+  {title:'Workplace AI: diminishing returns',category:'AI / BUSINESS STRATEGY',summary:'Exploring the diminishing returns of workplace AI adoption and what that means for business value.',deckUrl:'Workplace_AI_Diminishing_Returns.pdf'},
+  {title:'Branded stablecoins',category:'FINTECH / BUSINESS STRATEGY',summary:'Exploring branded stablecoins as a business strategy question: where they could create value and what trade-offs matter.',deckUrl:'Stablecoins_Branded_Coin_Shakeout.pdf'},
+  {title:'Google AI Mode monetization',category:'AI / MONETIZATION STRATEGY',summary:'Exploring how Google could monetize AI Mode as the search experience evolves.',deckUrl:'Google_AI_Mode_Monetization_Strategy_Expanded.pdf'}
+];
+const destinations=[
+  {id:'pricing',number:'01',type:'SELECTED PROJECTS',label:['Strategy','projects'],name:'Strategy projects',subtitle:'AI, fintech & monetization',room:{x:2,y:2,w:8,h:3},gate:[8,4],title:'A few good business questions.',deck:'Selected projects exploring how emerging technology changes business value, strategic choices, and monetization.'},
+  {id:'filters',number:'02',type:'PRODUCT',label:['Dashboard','filter coverage'],name:'Dashboard filter coverage',subtitle:'Make scope visible',room:{x:15,y:2,w:8,h:3},gate:[21,4],title:'Know what your filters actually cover.',deck:'A product concept for making dashboard filter coverage understandable before an analysis goes off track.',steps:[
+    ['The problem','A filter can appear global while affecting only some charts, making dashboards harder to trust.'],
+    ['The alternatives','Consider chart badges, a coverage map, and a dedicated inspection mode.'],
+    ['The direction','Surface scope when a filter is selected. This concept would be validated with user research.']
+  ]},
+  {id:'about',number:'03',type:'THE PERSON',label:['A little','about me'],name:'A little about me',subtitle:'Behind the projects',room:{x:2,y:13,w:8,h:3},gate:[8,13],title:'Meet the person behind the pixels.',deck:'A space for the interests, motivations, and experiences that make this portfolio personal.',steps:[
+    ['Hello, I am Evan','A personal introduction would appear here in Evan\u2019s own words.'],
+    ['What sparks my curiosity','Business questions, thoughtful products, and the space where the two meet. Illustrative profile copy.'],
+    ['Outside the projects','A place for interests and the details that do not fit on a resume.']
+  ]},
+  {id:'experience',number:'04',type:'THE JOURNEY',label:['Experience','& awards'],name:'Experience & case competitions',subtitle:'A path toward strategy',room:{x:15,y:13,w:8,h:3},gate:[21,13],title:'Building toward strategy.',deck:'One thread connects my experience: understanding what drives a business, evaluating the choices, and turning a direction into action. Each role has added a different perspective.'},
+  {id:'contact',number:'05',type:'SAY HELLO',label:['Your next','conversation.'],name:'Get in touch',subtitle:'Start something good',room:{x:9,y:8,w:7,h:3},gate:[14,8],title:'Good things start with a hello.',deck:'An invitation to talk about interesting problems, projects, and possibilities.',steps:[
+    ['Get in touch','A verified email address and LinkedIn profile would appear here in the finished portfolio.'],
+    ['Keep it human','A short, personal invitation to start a conversation.'],
+    ['Just a concept for now','No contact details are fabricated, and nothing here sends a message.']
+  ]}
+];
+const cols=25,rows=19,cell=32;
+const start=[12,17];
+const ghostPosition=[12,3];
+const ghost=document.getElementById('ghost');
+ghost.setAttribute('transform','translate('+(ghostPosition[0]*cell+cell/2)+' '+(ghostPosition[1]*cell+cell/2)+')');
+let ghostAvailable=true;
+let position=[...start],routeTimer=null,routeVersion=0;
+const visited=new Set();
+const mazeStage=document.getElementById('maze-stage');
+const dialog=document.getElementById('detail-dialog');
+const blocked=new Set();
+const key=([x,y])=>x+','+y;
+for(let x=0;x<cols;x++){blocked.add(key([x,0]));blocked.add(key([x,rows-1]))}
+for(let y=0;y<rows;y++){blocked.add(key([0,y]));blocked.add(key([cols-1,y]))}
+const islands=[...destinations.map(d=>d.room),{x:3,y:7,w:3,h:3},{x:19,y:7,w:3,h:3},{x:11,y:14,w:3,h:3}];
+islands.forEach(({x,y,w,h})=>{for(let dy=0;dy<h;dy++)for(let dx=0;dx<w;dx++)blocked.add(key([x+dx,y+dy]))});
+destinations.forEach(destination=>blocked.delete(key(destination.gate)));
+function svgNode(type,attributes){
+  const node=document.createElementNS('http://www.w3.org/2000/svg',type);
+  Object.entries(attributes).forEach(([name,value])=>node.setAttribute(name,String(value)));
+  return node;
+}
+const walls=document.getElementById('walls');
+walls.append(svgNode('rect',{x:12,y:12,width:776,height:584,rx:14,class:'boundary'}));
+walls.append(svgNode('rect',{x:20,y:20,width:760,height:568,rx:8,class:'inner-line'}));
+islands.forEach(({x,y,w,h})=>{
+  walls.append(svgNode('rect',{x:x*cell+3,y:y*cell+3,width:w*cell-6,height:h*cell-6,rx:10,class:'island'}));
+  walls.append(svgNode('rect',{x:x*cell+8,y:y*cell+8,width:w*cell-16,height:h*cell-16,rx:6,class:'inner-line'}));
+});
+destinations.forEach(destination=>{
+  const {x,y,w,h}=destination.room;
+  const bottom=destination.gate[1]===y+h-1;
+  const cx=destination.gate[0]*cell+cell/2,edge=bottom?(y+h)*cell-3:y*cell+3;
+  const outside=bottom?1:-1;
+  const doorway=svgNode('g',{'data-doorway':destination.id});
+  // Erase both wall outlines at the same cell that is walkable in the collision map.
+  doorway.append(svgNode('line',{x1:cx-22,y1:edge,x2:cx+22,y2:edge,class:'door-gap'}));
+  [-1,1].forEach(side=>doorway.append(svgNode('line',{x1:cx+side*22,y1:edge-6,x2:cx+side*22,y2:edge+6,class:'door-jamb'})));
+  const arrowY=edge+outside*17;
+  doorway.append(svgNode('path',{d:'M'+(cx-5)+' '+(arrowY+outside*3)+' L'+cx+' '+(arrowY-outside*3)+' L'+(cx+5)+' '+(arrowY+outside*3),class:'door-arrow'}));
+  const label=svgNode('text',{x:cx-30,y:edge+3,'text-anchor':'end',class:'door-label'});
+  label.textContent='ENTER';doorway.append(label);
+  document.getElementById('doorways').append(doorway);
+});
+function highlight(id){
+  document.querySelectorAll('[data-destination]').forEach(button=>button.classList.toggle('linked',button.dataset.destination===id));
+}
+function bindDestination(button,destination,autoWalk){
+  button.dataset.destination=destination.id;
+  button.setAttribute('aria-haspopup','dialog');
+  button.addEventListener('pointerenter',()=>highlight(destination.id));
+  button.addEventListener('pointerleave',()=>highlight(null));
+  button.addEventListener('focus',()=>highlight(destination.id));
+  button.addEventListener('blur',()=>highlight(null));
+  button.addEventListener('click',()=>{if(autoWalk)walkTo(destination);else{cancelRoute();openDestination(destination)}});
+}
+destinations.forEach(destination=>{
+  const {x,y,w,h}=destination.room;
+  const room=document.createElement('button');room.className='room';
+  room.style.left=(x/cols*100)+'%';room.style.top=(y/rows*100)+'%';
+  room.style.width=(w/cols*100)+'%';room.style.height=(h/rows*100)+'%';
+  room.setAttribute('aria-label','Explore '+destination.name);
+  const kicker=document.createElement('span');kicker.className='room-kicker';kicker.textContent=destination.number+' / '+destination.type;
+  const title=document.createElement('strong');
+  destination.label.forEach((line,index)=>{if(index)title.append(document.createElement('br'));title.append(document.createTextNode(line))});
+  const sub=document.createElement('small');sub.textContent=destination.subtitle;
+  const arrow=document.createElement('span');arrow.className='room-arrow';arrow.textContent='\u2197';arrow.setAttribute('aria-hidden','true');
+  room.append(kicker,title,sub,arrow);bindDestination(room,destination,true);mazeStage.append(room);
+  const link=document.createElement('button');link.className='quick-link';
+  const number=document.createElement('span');number.textContent=destination.number+' / '+destination.type;
+  const name=document.createElement('strong');name.textContent=destination.name+' \u2197';
+  const copy=document.createElement('small');copy.textContent=destination.subtitle;
+  link.append(number,name,copy);bindDestination(link,destination,false);document.getElementById('quick-links').append(link);
+});
+function setStatus(text){document.getElementById('status').textContent=text}
+function renderProgress(){document.getElementById('score').textContent=String(visited.size).padStart(2,'0')+' / 05'}
+function renderPlayer(previous=position){
+  const [x,y]=position,dx=x-previous[0],dy=y-previous[1];
+  document.getElementById('player').setAttribute('transform','translate('+(x*cell+cell/2)+' '+(y*cell+cell/2)+')');
+  if(dx||dy)document.getElementById('player-face').setAttribute('transform',dx<0?'scale(-1 1)':'rotate('+(dy<0?-90:dy>0?90:0)+')');
+}
+function eatGhost(){
+  if(!ghostAvailable||key(position)!==key(ghostPosition))return false;
+  ghostAvailable=false;
+  ghost.style.display='none';
+  cancelRoute();
+  openDestination(destinations.find(destination=>destination.id==='about'));
+  return true;
+}
+function neighbors([x,y]){
+  return [[x+1,y],[x-1,y],[x,y+1],[x,y-1]].filter(([nx,ny])=>nx>=0&&nx<cols&&ny>=0&&ny<rows&&!blocked.has(key([nx,ny])));
+}
+function shortestPath(from,to){
+  const queue=[from],previous=new Map([[key(from),null]]);
+  for(let index=0;index<queue.length;index++){
+    const current=queue[index];
+    if(key(current)===key(to)){
+      const path=[];let step=current;
+      while(step){path.unshift(step);step=previous.get(key(step))}
+      return path;
+    }
+    neighbors(current).forEach(next=>{if(!previous.has(key(next))){previous.set(key(next),current);queue.push(next)}});
+  }
+  throw new Error('Unreachable portfolio destination: '+key(to));
+}
+function cancelRoute(){
+  routeVersion++;
+  if(routeTimer!==null){clearTimeout(routeTimer);routeTimer=null}
+}
+function walkTo(destination){
+  cancelRoute();
+  const version=routeVersion,path=shortestPath(position,destination.gate);
+  setStatus('ON MY WAY \u2192 '+destination.name+'. You can pick a different destination at any time.');
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    for(const next of path.slice(1)){
+      const previous=position;position=next;renderPlayer(previous);
+      if(eatGhost())return;
+    }
+    openDestination(destination);return;
+  }
+  const delay=Math.min(45,Math.max(12,Math.floor(650/Math.max(1,path.length-1))));
+  let index=1;
+  function step(){
+    if(version!==routeVersion)return;
+    if(index>=path.length){routeTimer=null;openDestination(destination);return}
+    const previous=position;position=path[index++];renderPlayer(previous);
+    if(eatGhost())return;
+    routeTimer=setTimeout(step,delay);
+  }
+  step();
+}
+function renderExperience(content){
+  function heading(text){
+    const title=document.createElement('h3');title.className='experience-heading';title.textContent=text;content.append(title);
+  }
+  heading('The path so far');
+  const note=document.createElement('p');note.className='timeline-note';
+  note.textContent='Ordered by when I joined; Launchpad and BTA overlapped with internships. Select a milestone for its story.';content.append(note);
+  const timeline=document.createElement('ol');timeline.id='experience-timeline';timeline.className='experience-timeline';timeline.setAttribute('aria-label','Experience timeline, alternating above and below the line');
+  for(const secondary of [false,true]){
+    const axis=document.createElement('li');axis.className='timeline-axis'+(secondary?' timeline-axis-secondary':'');
+    axis.setAttribute('aria-hidden','true');axis.setAttribute('role','presentation');timeline.append(axis);
+  }
+  const insight=document.createElement('section');insight.id='timeline-insight';insight.className='timeline-insight';insight.setAttribute('aria-live','polite');insight.setAttribute('aria-label','Selected experience story');
+  const meta=document.createElement('p');meta.className='timeline-insight-meta';
+  const insightTheme=document.createElement('h4');
+  const insightStory=document.createElement('p');insightStory.className='role-story';insight.append(meta,insightTheme,insightStory);
+  const milestones=[...experienceTimeline,{company:'Strategy',role:'My career goal',dates:'NEXT / MY CAREER GOAL',theme:'Help shape what comes next.',story:'I want to bring these perspectives into a strategy role: frame the right question, evaluate the options, and help a business decide where to go next.'}];
+  const cards=[];
+  function selectMilestone(index){
+    const item=milestones[index];
+    cards.forEach((card,i)=>card.setAttribute('aria-pressed',String(i===index)));
+    meta.textContent=item.company+' / '+item.role;
+    insightTheme.textContent=item.theme;insightStory.textContent=item.story;
+  }
+  milestones.forEach((item,index)=>{
+    const step=document.createElement('li');step.className='timeline-step'+(index===milestones.length-1?' timeline-goal':'');
+    step.dataset.side=index%2?'bottom':'top';
+    step.style.setProperty('--timeline-column',index+1);step.style.setProperty('--timeline-row',index%2?3:1);
+    step.style.setProperty('--timeline-mobile-column',index%4+1);step.style.setProperty('--timeline-mobile-row',Math.floor(index/4)*4+(index%2?3:1));
+    const card=document.createElement('button');card.className='timeline-card';card.setAttribute('aria-controls','timeline-insight');
+    card.setAttribute('aria-label',item.company+', '+item.role+', '+item.dates);card.title=item.role;
+    const dates=document.createElement('span');dates.className='role-dates';dates.textContent=item.dates;
+    const company=document.createElement('span');company.className='role-company';company.textContent=item.company;
+    const theme=document.createElement('span');theme.className='role-theme';theme.textContent=item.theme;
+    card.append(dates,company,theme);card.addEventListener('click',()=>selectMilestone(index));
+    cards.push(card);step.append(card);timeline.append(step);
+  });
+  selectMilestone(0);content.append(timeline,insight);
+  heading('Case competitions');
+  const grid=document.createElement('div');grid.className='competition-grid';
+  competitions.forEach(item=>{
+    const card=document.createElement('article');card.className='competition';
+    const rank=document.createElement('div');rank.className='competition-rank';rank.textContent=item.rank;
+    const field=document.createElement('small');field.textContent=item.field||'place';rank.append(field);
+    const copy=document.createElement('div'),name=document.createElement('h4');name.textContent=item.name;copy.append(name);
+    if(item.sponsor){const sponsor=document.createElement('p');sponsor.textContent='Sponsored by '+item.sponsor;copy.append(sponsor)}
+    card.append(rank,copy);grid.append(card);
+  });
+  content.append(grid);
+}
+function renderProjects(content){
+  const grid=document.createElement('div');grid.className='project-grid';
+  projects.forEach(project=>{
+    const card=document.createElement('article');card.className='project-card';
+    const category=document.createElement('p');category.className='project-category mono';category.textContent=project.category;
+    const title=document.createElement('h3');title.textContent=project.title;
+    const summary=document.createElement('p');summary.className='project-summary';summary.textContent=project.summary;
+    card.append(category,title,summary);
+    if(project.deckUrl){
+      const link=document.createElement('a');link.className='project-link';link.href=project.deckUrl;link.target='_blank';link.rel='noopener';link.textContent='View deck (PDF) \u2197';link.setAttribute('aria-label','View '+project.title+' deck (PDF, opens in a new tab)');card.append(link);
+    }else{
+      const pending=document.createElement('p');pending.className='project-pending';pending.textContent='Deck not linked yet';card.append(pending);
+    }
+    grid.append(card);
+  });
+  content.append(grid);
+}
+function openDestination(destination){
+  dialog.classList.toggle('experience-dialog',destination.id==='experience');
+  dialog.classList.toggle('projects-dialog',destination.id==='pricing');
+  visited.add(destination.id);renderProgress();
+  const room=document.querySelector('.room[data-destination="'+destination.id+'"]');
+  room.classList.add('viewed');room.querySelector('.room-arrow').textContent='\u2713';
+  document.getElementById('detail-category').textContent=destination.number+' / '+destination.type;
+  document.getElementById('detail-title').textContent=destination.title;
+  document.getElementById('detail-deck').textContent=destination.deck;
+  const content=document.getElementById('detail-sections');content.replaceChildren();
+  if(destination.id==='experience')renderExperience(content);
+  else if(destination.id==='pricing')renderProjects(content);
+  else destination.steps.forEach(([title,text])=>{
+      const block=document.createElement('section');block.className='detail-section';
+      const heading=document.createElement('h3');heading.textContent=title;
+      const copy=document.createElement('p');copy.textContent=text;block.append(heading,copy);content.append(block);
+    });
+  document.querySelector('.sample-note').hidden=destination.id==='experience'||destination.id==='pricing';
+  setStatus('NOW EXPLORING \u2192 '+destination.name+'. Every other destination is still open.');
+  dialog.showModal();dialog.scrollTop=0;
+}
+const directions={up:[0,-1],left:[-1,0],down:[0,1],right:[1,0]};
+function move(direction){
+  if(dialog.open)return;
+  cancelRoute();
+  const [dx,dy]=directions[direction],next=[position[0]+dx,position[1]+dy];
+  if(blocked.has(key(next))||next[0]<0||next[0]>=cols||next[1]<0||next[1]>=rows){
+    setStatus('A wall! Try another direction, or click a room and I will find the path.');return;
+  }
+  const previous=position;position=next;renderPlayer(previous);
+  if(eatGhost())return;
+  const destination=destinations.find(d=>key(d.gate)===key(position));
+  if(destination)openDestination(destination);
+  else setStatus('KEEP EXPLORING \u00b7 Step through a yellow-marked opening to enter a room.');
+}
+document.addEventListener('keydown',event=>{
+  if(dialog.open||event.defaultPrevented||event.isComposing||event.altKey||event.ctrlKey||event.metaKey)return;
+  if(event.target instanceof HTMLElement&&(event.target.isContentEditable||event.target.closest('input,textarea,select,[role="textbox"],[role="combobox"],[role="slider"]')))return;
+  const keys={ArrowUp:'up',ArrowLeft:'left',ArrowDown:'down',ArrowRight:'right',w:'up',a:'left',s:'down',d:'right'};
+  const direction=keys[event.key]||keys[event.key.toLowerCase()];
+  if(direction){event.preventDefault();move(direction)}
+});
+document.querySelectorAll('[data-direction]').forEach(button=>button.addEventListener('click',()=>move(button.dataset.direction)));
+document.querySelectorAll('[data-nav]').forEach(button=>button.addEventListener('click',()=>{cancelRoute();openDestination(destinations.find(d=>d.id===button.dataset.nav))}));
+document.getElementById('close-dialog').addEventListener('click',()=>dialog.close());
+document.getElementById('reset-button').addEventListener('click',()=>{
+  cancelRoute();position=[...start];visited.clear();renderPlayer();renderProgress();
+  ghostAvailable=true;ghost.style.removeProperty('display');
+  document.getElementById('player-face').removeAttribute('transform');
+  document.querySelectorAll('.room').forEach(room=>{room.classList.remove('viewed');room.querySelector('.room-arrow').textContent='\u2197'});
+  setStatus('FRESH START \u00b7 Every doorway is open. Walk inside any room, or click it to go there.');
+});
+renderPlayer();
+</script>
+</body>
+</html>
