@@ -67,18 +67,18 @@ h1 span { color: var(--cp-accent); }
 .score { text-align: right; font-size: 9px; color: var(--cp-text-soft); letter-spacing: 1px; }
 .score strong { display: block; color: var(--cp-accent); font-size: 25px; letter-spacing: 3px; margin-top: 4px; }
 .game-layout { display: grid; grid-template-columns: minmax(0,800px) minmax(160px,1fr); gap: 32px; align-items: center; padding-top: 20px; }
-.maze-stage { width: 100%; position: relative; aspect-ratio: 25 / 19; border-radius: 10px; touch-action: manipulation; }
+.maze-stage { width: 100%; position: relative; aspect-ratio: 25 / 19; border-radius: 10px; touch-action: manipulation; container-type: inline-size; }
 .maze-stage > svg { display: block; width: 100%; height: 100%; }
 .boundary, .island { fill: var(--cp-surface); stroke: var(--cp-link); stroke-width: 2.5; }
 .inner-line { fill: none; stroke: var(--cp-link); stroke-width: 1; opacity: .5; }
 .door-gap { stroke: var(--cp-surface); stroke-width: 20; }
 .door-jamb, .door-arrow { fill: none; stroke: var(--cp-warning); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .door-label { fill: var(--cp-warning); font-family: Consolas, "Courier New", Courier, monospace; font-size: 8px; letter-spacing: 1px; }
-.room { position: absolute; background: none; text-align: left; display: flex; flex-direction: column; justify-content: center; align-items: start; padding: 12px 18px; border-radius: 10px; transition: background .15s; }
+.room { position: absolute; background: none; text-align: left; display: flex; flex-direction: column; justify-content: center; align-items: start; padding: 1.5cqw 2.5cqw; border-radius: 10px; transition: background .15s; }
 .room:hover, .room.linked { background: var(--cp-accent-soft); box-shadow: inset 0 0 0 2px var(--cp-accent); }
-.room-kicker { font-size: clamp(7px,.75vw,10px); letter-spacing: 1px; color: var(--cp-accent); font-family: Consolas, "Courier New", Courier, monospace; font-weight: 700; }
-.room strong { display: block; font-family: Consolas, "Courier New", Courier, monospace; font-size: clamp(12px,1.7vw,22px); letter-spacing: -.6px; line-height: 1.05; margin: 7px 0 4px; }
-.room small { font-size: clamp(7px,.72vw,10px); color: var(--cp-text-soft); }
+.room-kicker { font-size: 1.05cqw; line-height: 1.2; letter-spacing: .1cqw; color: var(--cp-accent); font-family: Consolas, "Courier New", Courier, monospace; font-weight: 700; }
+.room strong { display: block; font-family: Consolas, "Courier New", Courier, monospace; font-size: 2.35cqw; letter-spacing: -.06cqw; line-height: 1.05; margin: .6cqw 0 .4cqw; }
+.room small { font-size: 1cqw; line-height: 1.3; color: var(--cp-text-soft); }
 .room-arrow { position: absolute; right: 12px; top: 12px; font-size: 14px; color: var(--cp-accent); }
 .room.viewed .room-arrow { color: var(--cp-success); }
 .player-shape { fill: var(--cp-player); stroke: var(--cp-bg); stroke-width: .75; }
@@ -189,8 +189,6 @@ dialog h2 { font-family: Consolas,"Courier New",Courier,monospace; font-size: 30
   .site { padding: 0 24px; }
   .game-layout { grid-template-columns: minmax(0,1fr) 150px; gap: 20px; }
   .cabinet { padding: 20px; }
-  .room { padding: 8px 12px; }
-  .room strong { font-size: clamp(12px,1.9vw,18px); }
   .room small { display: none; }
   .room-arrow { right: 7px; top: 7px; font-size: 10px; }
   .game-aside h2 { font-size: 24px; }
@@ -212,9 +210,7 @@ dialog h2 { font-family: Consolas,"Courier New",Courier,monospace; font-size: 30
   .manual-controls { grid-column: 2; grid-row: 1 / 4; }
   .control-label, .free-play { display: none; }
   .keyboard-tip { max-width: 124px; font-size: 8px; }
-  .room { padding: 3px 8px; border-radius: 6px; }
-  .room strong { font-size: clamp(11px,2.8vw,19px); margin: 3px 0 0; }
-  .room-kicker { font-size: clamp(6px,1.4vw,9px); letter-spacing: .3px; }
+  .room { border-radius: 6px; }
   .room-arrow { top: 4px; right: 5px; }
   .quick-links { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
   .quick-link:last-child { grid-column: 1 / 3; }
@@ -225,9 +221,7 @@ dialog h2 { font-family: Consolas,"Courier New",Courier,monospace; font-size: 30
   header { align-items: start; }
   .brand { font-size: 12px; gap: 6px; }
   nav button { padding: 4px 5px; font-size: 9px; }
-  .room { padding: 2px 6px; }
   .room-kicker { display: none; }
-  .room strong { font-size: 10px; }
   .room-arrow { display: none; }
   .player-heading { font-size: 10px; letter-spacing: 1px; }
   .player-heading span { font-size: 8px; letter-spacing: .4px; }
